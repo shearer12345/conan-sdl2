@@ -35,11 +35,14 @@ class SDLConan(ConanFile):
         del self.settings.compiler.libcxx
     
     def source(self):
-        zip_name = "%s.tar.gz" % self.folder
-        download("https://www.libsdl.org/release/%s" % zip_name, zip_name)
-        unzip(zip_name)
-        shutil.move("%s/CMakeLists.txt" % self.folder, "%s/CMakeListsOriginal.cmake" % self.folder)
-        shutil.move("CMakeLists.txt", "%s/CMakeLists.txt" % self.folder)
+        if self.settings.os == "Windows" and self.options.shared:
+            self.output.warn("Using pre-built binaries for shared on Windows.")
+        else:
+            zip_name = "%s.tar.gz" % self.folder
+            download("https://www.libsdl.org/release/%s" % zip_name, zip_name)
+            unzip(zip_name)
+            shutil.move("%s/CMakeLists.txt" % self.folder, "%s/CMakeListsOriginal.cmake" % self.folder)
+            shutil.move("CMakeLists.txt", "%s/CMakeLists.txt" % self.folder)
 
     def build(self):
         """ Define your project building. You decide the way of building it
@@ -47,9 +50,17 @@ class SDLConan(ConanFile):
         """
 
         if self.settings.os == "Windows":
-            self.build_with_cmake()
+            if self.options.shared:
+                self.build_copying_libs()
+            else:
+                self.build_with_cmake()
         else:
             self.build_with_make()
+
+    def build_copying_libs(self):
+        zip_name = "%s-devel-%s-VC.zip" % (self.name, self.version)
+        download("https://www.libsdl.org/release/%s" % zip_name, zip_name)
+        unzip("%s" % zip_name)
 
     def build_with_make(self):
          
@@ -104,14 +115,16 @@ class SDLConan(ConanFile):
         # Win
         if self.options.shared:
             self.copy(pattern="*.dll", dst="bin", src="%s/_build/" % self.folder, keep_path=False)
+            self.copy(pattern="*.dll", dst="bin", src="%s/lib/x64/" % self.folder, keep_path=False)
         self.copy(pattern="*.lib", dst="lib", src="%s/_build/" % self.folder, keep_path=False)
-        
+        self.copy(pattern="*.lib", dst="lib", src="%s/lib/x64/" % self.folder, keep_path=False)
+
         # UNIX
         if self.settings.os != "Windows":
             self.copy(pattern="sdl2-config", dst="lib", src="%s/" % self.folder, keep_path=False)
             if not self.options.shared:
                 self.copy(pattern="*.a", dst="lib", src="%s/build/" % self.folder, keep_path=False)
-                self.copy(pattern="*.a", dst="lib", src="%s/build/.libs/" % self.folder, keep_path=False)   
+                self.copy(pattern="*.a", dst="lib", src="%s/build/.libs/" % self.folder, keep_path=False)
             else:
                 self.copy(pattern="*.so*", dst="lib", src="%s/build/.libs/" % self.folder, keep_path=False)
                 self.copy(pattern="*.dylib*", dst="lib", src="%s/build/.libs/" % self.folder, keep_path=False)

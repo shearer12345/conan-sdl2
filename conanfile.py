@@ -111,13 +111,21 @@ class SDLConan(ConanFile):
 
         self.copy(pattern="*.h", dst="include/SDL2", src="%s/_build/include" % self.folder, keep_path=False)
         self.copy(pattern="*.h", dst="include/SDL2", src="%s/include" % self.folder, keep_path=False)
+        self.copy(pattern="*.h", dst="include", src="%s/_build/include" % self.folder, keep_path=False)
+        self.copy(pattern="*.h", dst="include", src="%s/include" % self.folder, keep_path=False)
         
         # Win
         if self.options.shared:
             self.copy(pattern="*.dll", dst="bin", src="%s/_build/" % self.folder, keep_path=False)
-            self.copy(pattern="*.dll", dst="bin", src="%s/lib/x64/" % self.folder, keep_path=False)
+            if self.settings.arch == "x86":
+                self.copy(pattern="*.dll", dst="bin", src="%s/lib/x86/" % self.folder, keep_path=False)
+            else:
+                self.copy(pattern="*.dll", dst="bin", src="%s/lib/x64/" % self.folder, keep_path=False)
         self.copy(pattern="*.lib", dst="lib", src="%s/_build/" % self.folder, keep_path=False)
-        self.copy(pattern="*.lib", dst="lib", src="%s/lib/x64/" % self.folder, keep_path=False)
+        if self.settings.arch == "x86":
+            self.copy(pattern="*.lib", dst="lib", src="%s/lib/x86/" % self.folder, keep_path=False)
+        else:
+            self.copy(pattern="*.lib", dst="lib", src="%s/lib/x64/" % self.folder, keep_path=False)
 
         # UNIX
         if self.settings.os != "Windows":
@@ -137,6 +145,8 @@ class SDLConan(ConanFile):
         if self.settings.os == "Windows":
             self.cpp_info.libs.append("OpenGL32")
             self.cpp_info.libs.append("SDL2main")
+            self.cpp_info.libs.append("SDL2")
+
             if self.settings.compiler == "Visual Studio":
                 # CFLAGS
                 self.cpp_info.cflags = ["/DWIN32", "/D_WINDOWS", "/W3"]
